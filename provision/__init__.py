@@ -1,5 +1,5 @@
 from fabric.api import *
-from fabric.contrib.files import append
+from fabric.contrib import files
 from fabric.operations import *
 from fabric.state import _AttributeDict
 import json
@@ -48,39 +48,60 @@ class ChefDict(_AttributeDict):
     
 chef = ChefDict(DEFAULTS)
 
+
 def apt():
     sudo('apt-get update')
     sudo('apt-get -y upgrade')
     sudo('apt-get install -y ruby ruby-dev wget %s' % ' '.join(CHEF_DEPENDENCIES.split('\n')))
 
 def gems():
-    gems = '%s/rubygems-%s.tgz' % (chef.path, chef.gems)
-    gemsurl = 'http://production.cf.rubygems.org/rubygems/rubygems-%s.tgz' % (chef.gems)    
-    sudo('if [ ! -f %s ]; then wget -O %s %s; fi' % (gems, gems, gemsurl))
+    ctx = {
+        'filename':'%(path)s/rubygems-%(gems)s.tgz' % chef,
+        'url':'http://production.cf.rubygems.org/rubygems/rubygems-%(gems)s.tgz' % chef,
+    }    
+    if not files.exists(ctx['filename']):
+        sudo('wget -O %(filename)s %(url)s' % ctx)
     
     with cd(chef.path):
-        sudo('tar -xf %s' % gems)
-        with cd(os.path.split(os.path.splitext(gems)[0])[1]):
+        sudo('tar -xf %(filename)s' % ctx)
+        with cd(os.path.split(os.path.splitext(ctx['filename'])[0])[1]):
             sudo('ruby setup.rb install --no-format-executable --no-rdoc --no-ri')
-    
-    sudo('if [ ! `which chef-solo` ]; then gem install chef --no-rdoc --no-ri -n /usr/local/bin; fi')
+        
+    if not files.exists('/usr/local/bin/chef-solo'):
+        sudo('gem install chef --no-rdoc --no-ri -n /usr/local/bin')
 
 def upload():
-    sudo('mkdir -p %s' % chef.path)
+    ctx = {
+        'cookbooks': '%(path)s/cookbooks' % chef,
+        'node.json': '%(path)s/node.json' % chef,
+        'solo.rb': '%(path)s/solor.rb' % chef,
+    }
+    
     tmpfolder = tempfile.mkdtemp()
+    
     local('mkdir %s/cookbooks && cp -r %s/* %s/cookbooks/' % (tmpfolder, os.path.normpath(chef.cookbooks), tmpfolder))
     local('cd %s && tar -f cookbooks.tgz -cz ./cookbooks' % tmpfolder)
+    
     put('%s/cookbooks.tgz' % tmpfolder, chef.path, use_sudo=True)
-    sudo('if [ -d %s/cookbooks ]; then rm -rf %s/cookbooks; fi' % (chef.path, chef.path))
-    sudo('if [ -f %s/node.json ]; then rm %s/node.json; fi' % (chef.path, chef.path))
-    sudo('if [ -f %s/solo.rb ]; then rm %s/solo.rb; fi' % (chef.path, chef.path))
+    
+    if files.exists(ctx['cookbooks']):
+        sudo('rm -rf %(cookbooks)s' % ctx)
+    
+    if files.exists(ctx['node.json']):
+        sudo('rm -rf %(node.json)s' % ctx)
+    
+    if files.exists(ctx['solo.rb']):
+        sudo('rm -rf %(solo.rb)s' % ctx)
+    
     with cd(chef.path):
         sudo('tar -xf cookbooks.tgz')
-    append('%s/node.json' % chef.path, json.dumps(chef.json), use_sudo=True)
-    append('%s/solo.rb' % chef.path, SOLO_RB % chef, use_sudo=True)
+
+    files.append(ctx['node.json'], json.dumps(chef.json), use_sudo=True)
+    files.append(ctx['solo.rb'], SOLO_RB % chef, use_sudo=True)
 
 @task(default=True)
 def provision():
+    sudo('mkdir -p %(path)s' % chef)
     apt()
     gems()
     upload()
