@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 DEFAULTS = dict(
     path='/var/chef',
@@ -74,7 +74,7 @@ def upload():
     ctx = {
         'cookbooks': '%(path)s/cookbooks' % chef,
         'node.json': '%(path)s/node.json' % chef,
-        'solo.rb': '%(path)s/solor.rb' % chef,
+        'solo.rb': '%(path)s/solo.rb' % chef,
     }
     
     tmpfolder = tempfile.mkdtemp()
