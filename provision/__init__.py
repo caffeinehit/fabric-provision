@@ -7,11 +7,11 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 DEFAULTS = dict(
     path='/var/chef',
-    cookbooks='cookbooks',
+    cookbooks=['cookbooks'],
     log_level='info',
     gems='1.8.10',
     recipes=[],
@@ -79,7 +79,14 @@ def upload():
     
     tmpfolder = tempfile.mkdtemp()
     
-    local('mkdir %s/cookbooks && cp -r %s/* %s/cookbooks/' % (tmpfolder, os.path.normpath(chef.cookbooks), tmpfolder))
+    local('mkdir %s/cookbooks' % tmpfolder)
+
+    if not isinstance(chef.cookbooks, list):
+        chef.cookbooks = [chef.cookbooks]
+    
+    for folder in chef.cookbooks:
+        local('cp -r %s/* %s/cookbooks/' % (os.path.normpath(folder), tmpfolder))
+        
     local('cd %s && tar -f cookbooks.tgz -cz ./cookbooks' % tmpfolder)
     
     put('%s/cookbooks.tgz' % tmpfolder, chef.path, use_sudo=True)
