@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 DEFAULTS = dict(
     path='/var/chef',
