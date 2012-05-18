@@ -86,3 +86,11 @@ Settings
     :default: ``{}``
 
     Additional JSON information you'd like to transfer to the server.
+
+.. attribute:: use_omnibus_installer
+
+    :default: ``False``
+
+    Whether to use the
+    `Opscode Omnibus Installer <http://www.opscode.com/chef/install/>`_
+    to load Chef.
