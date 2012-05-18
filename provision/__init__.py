@@ -80,8 +80,9 @@ def omnibus_install():
     }
     if not files.exists(ctx['filename']):
         sudo('wget -O %(filename)s %(url)s' % ctx)
-    with cd(chef.path):
-        sudo('bash install.sh')
+    if not files.exists("/opt/opscode/bin/chef-solo"):
+        with cd(chef.path):
+            sudo('bash install.sh')
 
 def upload():
     ctx = {
