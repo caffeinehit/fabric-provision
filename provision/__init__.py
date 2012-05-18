@@ -16,6 +16,7 @@ DEFAULTS = dict(
     gems='1.8.10',
     recipes=[],
     json={},
+    use_omnibus_installer = False,
 )
 
 SOLO_RB = """
@@ -70,6 +71,18 @@ def gems():
     if not files.exists('/usr/local/bin/chef-solo'):
         sudo('gem install chef --no-rdoc --no-ri -n /usr/local/bin')
 
+def omnibus_install():
+    """Install Chef from Opscode's Omnibus installer
+    """
+    ctx = {
+        'filename':'%(path)s/install.sh' % chef,
+        'url':'http://opscode.com/chef/install.sh',
+    }
+    if not files.exists(ctx['filename']):
+        sudo('wget -O %(filename)s %(url)s' % ctx)
+    with cd(chef.path):
+        sudo('bash install.sh')
+
 def upload():
     ctx = {
         'cookbooks': '%(path)s/cookbooks' % chef,
@@ -107,13 +120,13 @@ def upload():
     files.append(ctx['solo.rb'], SOLO_RB % chef, use_sudo=True)
 
 @task(default=True)
-def provision():
+def provision(omnibus=False):
     sudo('mkdir -p %(path)s' % chef)
     apt()
-    gems()
+    if omnibus or chef.use_omnibus_installer:
+        omnibus_install()
+    else:
+        gems()
     upload()
     with cd(chef.path):
         sudo('chef-solo -c solo.rb -j node.json')
-    
-    
-    
