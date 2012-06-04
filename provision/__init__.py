@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 DEFAULTS = dict(
     path='/var/chef',
@@ -72,7 +72,8 @@ def gems():
         sudo('gem install chef --no-rdoc --no-ri -n /usr/local/bin')
 
 def omnibus_install():
-    """Install Chef from Opscode's Omnibus installer
+    """
+    Install Chef from Opscode's Omnibus installer
     """
     ctx = {
         'filename':'%(path)s/install.sh' % chef,

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 METADATA = dict(
     name='fabric-provision',
-    version='0.0.4',
+    version='0.0.5',
     author='Alen Mujezinovic',
     author_email='alen@caffeinehit.com',
     description='Server provisioning with Chef',
