@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 DEFAULTS = dict(
     path='/var/chef',
@@ -76,14 +76,13 @@ def omnibus_install():
     Install Chef from Opscode's Omnibus installer
     """
     ctx = {
-        'filename':'%(path)s/install.sh' % chef,
+        'filename':'%(path)s/install-chef.sh' % chef,
         'url':'http://opscode.com/chef/install.sh',
     }
     if not files.exists(ctx['filename']):
         sudo('wget -O %(filename)s %(url)s' % ctx)
-    if not files.exists("/opt/opscode/bin/chef-solo"):
         with cd(chef.path):
-            sudo('bash install.sh')
+            sudo('bash install-chef.sh')
 
 def upload():
     ctx = {
