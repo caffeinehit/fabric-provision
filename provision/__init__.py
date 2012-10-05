@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 DEFAULTS = dict(
     path='/var/chef',
@@ -48,14 +48,17 @@ class ChefDict(_AttributeDict):
     json = property(fget=_get_json)
     
 chef = ChefDict(DEFAULTS)
+chef.apt = True
 
 
 def apt():
-    sudo('apt-get update')
-    sudo('apt-get -y upgrade')
-    sudo('apt-get install -y ruby ruby-dev wget %s' % ' '.join(CHEF_DEPENDENCIES.split('\n')))
+    if chef.apt:
+        sudo('apt-get update')
+        sudo('apt-get -y upgrade')
+    
 
 def gems():
+    sudo('apt-get install -y ruby ruby-dev wget %s' % ' '.join(CHEF_DEPENDENCIES.split('\n')))
     ctx = {
         'filename':'%(path)s/rubygems-%(gems)s.tgz' % chef,
         'url':'http://production.cf.rubygems.org/rubygems/rubygems-%(gems)s.tgz' % chef,
@@ -121,13 +124,18 @@ def upload():
     files.append(ctx['solo.rb'], SOLO_RB % chef, use_sudo=True)
 
 @task(default=True)
-def provision(omnibus=False):
+@parallel
+def provision(omnibus=True):
     sudo('mkdir -p %(path)s' % chef)
+
     apt()
+
     if omnibus or chef.use_omnibus_installer:
         omnibus_install()
     else:
         gems()
+
     upload()
+
     with cd(chef.path):
         sudo('chef-solo -c solo.rb -j node.json')
