@@ -1,5 +1,5 @@
 from fabric.api import *
-from provision import chef, provision
+from provision import chef, provision, runchef
 
 env.hosts = ['vagrant@localhost:2222']
 

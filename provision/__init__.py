@@ -15,6 +15,7 @@ DEFAULTS = dict(
     log_level='info',
     gems='1.8.10',
     recipes=[],
+    roles=[],
     json={},
     use_omnibus_installer = False,
 )
@@ -24,6 +25,7 @@ log_level            :%(log_level)s
 log_location         STDOUT
 file_cache_path      "%(path)s"
 cookbook_path        [ "%(path)s/cookbooks" ]
+role_path            "%(path)s/roles"
 Chef::Log::Formatter.show_time = true
 """
 
@@ -38,12 +40,17 @@ libopenssl-ruby
 """
 
 class ChefDict(_AttributeDict):
+    def add_role(self, role):
+        self.roles.append(role)
+    	
     def add_recipe(self, recipe):
         self.recipes.append(recipe)
     
     def _get_json(self):
         json = self['json'].copy()
-        json['recipes'] = self['recipes']
+        json['run_list'] = json.get('run_list', [])
+        json['run_list'].extend(["recipe[%s]" % x for x in self['recipes']])
+        json['run_list'].extend(["role[%s]" % x for x in self['roles']])
         return json
     json = property(fget=_get_json)
     
@@ -90,36 +97,21 @@ def omnibus_install():
 def upload():
     ctx = {
         'cookbooks': '%(path)s/cookbooks' % chef,
+        'roles': '%(path)s/roles' % chef,
         'node.json': '%(path)s/node.json' % chef,
         'solo.rb': '%(path)s/solo.rb' % chef,
     }
-    
-    tmpfolder = tempfile.mkdtemp()
-    
-    local('mkdir %s/cookbooks' % tmpfolder)
-
     if not isinstance(chef.cookbooks, list):
         chef.cookbooks = [chef.cookbooks]
-    
+    tmpfolder = tempfile.mkdtemp()
+    local('mkdir %s/cookbooks' % tmpfolder)
     for folder in chef.cookbooks:
         local('cp -r %s/* %s/cookbooks/' % (os.path.normpath(folder), tmpfolder))
-        
-    local('cd %s && tar -f cookbooks.tgz -cz ./cookbooks' % tmpfolder)
-    
-    put('%s/cookbooks.tgz' % tmpfolder, chef.path, use_sudo=True)
-    
-    if files.exists(ctx['cookbooks']):
-        sudo('rm -rf %(cookbooks)s' % ctx)
-    
-    if files.exists(ctx['node.json']):
-        sudo('rm -rf %(node.json)s' % ctx)
-    
-    if files.exists(ctx['solo.rb']):
-        sudo('rm -rf %(solo.rb)s' % ctx)
-    
-    with cd(chef.path):
-        sudo('tar -xf cookbooks.tgz')
-
+    for path in ['cookbooks', 'roles', 'node.json', 'solo.rb']:
+        if files.exists(ctx[path]):
+            sudo('rm -rf %s' % ctx[path])
+    put('%s/cookbooks' % tmpfolder, chef.path, use_sudo=True)
+    put('roles', chef.path, use_sudo=True)
     files.append(ctx['node.json'], json.dumps(chef.json), use_sudo=True)
     files.append(ctx['solo.rb'], SOLO_RB % chef, use_sudo=True)
 
@@ -137,5 +129,14 @@ def provision(omnibus=True):
 
     upload()
 
+    with cd(chef.path):
+        sudo('chef-solo -c solo.rb -j node.json')
+
+@task(default=True)
+def runchef():
+    if not files.exists(chef.path):
+        abort("Remote no such directory: %s "
+              "(Host not yet provisioned. Run 'fab provision'" % chef.path)
+    upload()
     with cd(chef.path):
         sudo('chef-solo -c solo.rb -j node.json')
