@@ -24,7 +24,7 @@ SOLO_RB = """
 log_level            :%(log_level)s
 log_location         STDOUT
 file_cache_path      "%(path)s"
-data_bag_path        [ "%(path)s/data_bags" ]
+data_bag_path        "%(path)s/data_bags" 
 role_path            [ "%(path)s/roles" ]
 cookbook_path        [ "%(path)s/cookbooks" ]
 Chef::Log::Formatter.show_time = true
