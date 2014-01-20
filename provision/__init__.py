@@ -33,11 +33,13 @@ Chef::Log::Formatter.show_time = true
 
 class ChefDict(_AttributeDict):
     def add_recipe(self, recipe):
-        self.run_list.append('recipe[{}]'.format(recipe))
+        #self.run_list.append('recipe[{}]'.format(recipe))
+        self.run_list.append('recipe[%s]' % recipe)
 
     def add_role(self, role):
-        self.run_list.append('role[{}]'.format(role))
-    
+        #self.run_list.append('role[{}]'.format(role))
+        self.run_list.append('role[%s]' % role)
+
     def _get_json(self):
         json = self['json'].copy()
 
