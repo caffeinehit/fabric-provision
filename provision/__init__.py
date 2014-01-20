@@ -18,6 +18,7 @@ DEFAULTS = dict(
     recipes=[],
     run_list=[],
     json={},
+    chef_version=None
 )
 
 SOLO_RB = """
@@ -32,11 +33,13 @@ Chef::Log::Formatter.show_time = true
 
 class ChefDict(_AttributeDict):
     def add_recipe(self, recipe):
-        self.run_list.append('recipe[{}]'.format(recipe))
+        #self.run_list.append('recipe[{}]'.format(recipe))
+        self.run_list.append('recipe[%s]' % recipe)
 
     def add_role(self, role):
-        self.run_list.append('role[{}]'.format(role))
-    
+        #self.run_list.append('role[{}]'.format(role))
+        self.run_list.append('role[%s]' % role)
+
     def _get_json(self):
         json = self['json'].copy()
 
@@ -69,7 +72,10 @@ def omnibus():
     if not files.exists(ctx['filename']):
         sudo('wget -O %(filename)s %(url)s' % ctx)
         with cd(chef.path):
-            sudo('bash install-chef.sh')
+            install_cmd = 'bash install-chef.sh'
+            if chef.chef_version:
+                install_cmd += ' -v %s' % chef.chef_version
+            sudo(install_cmd)
 
 def upload():
     ctx = {
